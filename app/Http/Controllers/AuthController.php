@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Hash;
 use App\Models\Transaction;
 use App\Models\User;
 use App\Models\Project;
+use App\Http\Requests\RegisterUserRequest;
+use App\Http\Requests\UpdateUserRequest;
 
 class AuthController extends Controller
 {
@@ -21,27 +23,20 @@ class AuthController extends Controller
         return view('auth.register');
     }
 
-    public function register(Request $request)
+    public function register(RegisterUserRequest $request)
     {
         try {
-            $request->validate([
-                'name' => 'required|string|max:255',
-                'email' => 'required|string|email|max:255|unique:users',
-                'password' => 'required|string|min:6|confirmed',
-                'role' => 'required|in:admin,engineer,secretary,accountant',
-            ]);
+            $validated = $request->validated();
 
             $user = new User();
-            $user->name = $request->name;
-            $user->email = $request->email;
-            $user->password = Hash::make($request->password);
-            $user->role = $request->role;
+            $user->name = $validated['name'];
+            $user->email = $validated['email'];
+            $user->password = Hash::make($validated['password']);
+            $user->role = $validated['role'];
             $user->save();
 
             Auth::login($user);
             return $this->redirectUser($user);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return back()->withErrors($e->validator->errors())->withInput();
         } catch (\Exception $e) {
             return back()->withErrors(['error' => 'حدث خطأ أثناء إنشاء الحساب، يرجى المحاولة مرة أخرى لاحقًا']);
         }
@@ -85,8 +80,8 @@ class AuthController extends Controller
 
     public function adminDashboard()
     {
-        $users = User::all();
-        $usersCount = $users->count();
+        $users = User::paginate(10);
+        $usersCount = User::count();
     
         $totalProjectsCount = Project::whereNull('parent_id')->count();
     
@@ -101,21 +96,16 @@ class AuthController extends Controller
     }
 
     // تحديث بيانات المستخدم
-    public function updateUser(Request $request, $id)
+    public function updateUser(UpdateUserRequest $request, $id)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $id,
-            'role' => 'required|in:admin,engineer,secretary,accountant',
-            'password' => 'nullable|string|min:6|confirmed',
-        ]);
+        $validated = $request->validated();
 
         $user = User::findOrFail($id);
-        $user->name = $request->name;
-        $user->email = $request->email;
-        $user->role = $request->role;
-        if ($request->filled('password')) {
-            $user->password = Hash::make($request->password);
+        $user->name = $validated['name'];
+        $user->email = $validated['email'];
+        $user->role = $validated['role'];
+        if (!empty($validated['password'])) {
+            $user->password = Hash::make($validated['password']);
         }
         $user->save();
 
@@ -156,7 +146,7 @@ class AuthController extends Controller
 
     public function accountantDashboard()
     {
-        $transactions = Transaction::all();
+        $transactions = Transaction::paginate(10);
         return view('dashboard.accountant', compact('transactions'));
     }
 }
