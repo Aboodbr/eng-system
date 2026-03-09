@@ -8,26 +8,19 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('transactions', function (Blueprint $table) {
-            $table->id();
-            $table->string('transaction_name');
-            $table->string('transaction_code')->unique();
-            $table->string('client_name');
-            $table->decimal('total_amount', 10, 2);
-
+        // 2025_02_15_110736_create_transactions_table.php already creates transactions
+        // We only need to add missing installments to it.
+        Schema::table('transactions', function (Blueprint $table) {
             $table->decimal('installment_1', 10, 2)->default(0);
             $table->decimal('installment_2', 10, 2)->default(0);
             $table->decimal('installment_3', 10, 2)->default(0);
-
-            $table->decimal('paid_amount', 10, 2)->default(0); // مجموع الدفعات
-            $table->decimal('remaining_amount', 10, 2)->default(0); // المتبقي = القيمة - المدفوع
-
-            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('transactions');
+        Schema::table('transactions', function (Blueprint $table) {
+            $table->dropColumn(['installment_1', 'installment_2', 'installment_3']);
+        });
     }
 };

@@ -7,9 +7,18 @@ use App\Models\Project;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Requests\StoreProjectRequest;
+use App\Http\Requests\ForwardProjectRequest;
+use App\Services\ProjectService;
 
 class ProjectController extends Controller
 {
+    protected $projectService;
+
+    public function __construct(ProjectService $projectService)
+    {
+        $this->projectService = $projectService;
+    }
     /**
      * Display a listing of the user's projects.
      */
@@ -27,25 +36,13 @@ class ProjectController extends Controller
     /**
      * Store a newly created project in storage.
      */
-    public function store(Request $request)
+    public function store(StoreProjectRequest $request)
     {
         try {
-            $request->validate([
-                'title' => 'required|string|max:255',
-                'receiver_id' => 'required|exists:users,id',
-                'file' => 'nullable|file',
-            ]);
-
-            $filePath = $request->hasFile('file') ? 
-                        $request->file('file')->store('projects', 'public') : 
-                        null;
-
-            $project = Project::create([
-                'title' => $request->title,
-                'sender_id' => Auth::id(),
-                'receiver_id' => $request->receiver_id,
-                'file_path' => $filePath,
-            ]);
+            $project = $this->projectService->storeProject(
+                $request->validated(),
+                $request->file('file')
+            );
 
             return response()->json([
                 'success' => true,
@@ -57,10 +54,6 @@ class ProjectController extends Controller
                     'file_url' => $project->file_path ? asset('storage/' . $project->file_path) : null,
                 ],
             ]);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json([
-                'message' => $e->validator->errors()->first(), // إرجاع أول رسالة خطأ فقط
-            ], 422);
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'حدث خطأ أثناء إرسال المشروع: ' . $e->getMessage(),
@@ -92,27 +85,20 @@ class ProjectController extends Controller
      * Forward an existing project to another user.
      */
     
-    public function forwardProject(Request $request)
+    public function forwardProject(ForwardProjectRequest $request)
     {
-        $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'receiver_id' => 'required|exists:users,id',
-        ]);
+        try {
+            $this->projectService->forwardProject($request->validated());
 
-        $originalProject = Project::findOrFail($request->project_id);
-
-        $newProject = Project::create([
-            'title' => $originalProject->title,
-            'sender_id' => Auth::id(),
-            'receiver_id' => $request->receiver_id,
-            'file_path' => $originalProject->file_path,
-            'parent_id' => $originalProject->id,
-        ]);
-
-        return response()->json([
-            'success' => true,
-            'message' => 'تم إعادة إرسال المشروع بنجاح!',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'تم إعادة إرسال المشروع بنجاح!',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'حدث خطأ أثناء إرسال المشروع: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 
     /**

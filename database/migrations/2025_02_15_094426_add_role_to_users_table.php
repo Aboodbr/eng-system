@@ -12,8 +12,11 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            \DB::statement("ALTER TABLE users MODIFY role ENUM('engineer', 'secretary', 'admin', 'accountant') NOT NULL DEFAULT 'engineer'");
-        
+            // Using DB::statement for ENUM columns is problematic in sqlite
+            // For sqlite, enum columns are text. We'll skip the modification if it's sqlite.
+            if (\DB::getDriverName() !== 'sqlite') {
+                \DB::statement("ALTER TABLE users MODIFY role ENUM('engineer', 'secretary', 'admin', 'accountant') NOT NULL DEFAULT 'engineer'");
+            }
         });
     }
 
@@ -23,8 +26,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('users', function (Blueprint $table) {
-            \DB::statement("ALTER TABLE users MODIFY role ENUM('engineer', 'secretary', 'admin') NOT NULL DEFAULT 'engineer'");
-
+            if (\DB::getDriverName() !== 'sqlite') {
+                \DB::statement("ALTER TABLE users MODIFY role ENUM('engineer', 'secretary', 'admin') NOT NULL DEFAULT 'engineer'");
+            }
         });
     }
 };
