@@ -1,9 +1,9 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TransactionController;
+use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
@@ -22,11 +22,11 @@ use App\Http\Controllers\TransactionController;
 // ==========================================
 Route::controller(AuthController::class)->group(function () {
     Route::get('/', 'showLogin')->name('home');
-    
+
     // Registration Routes
-    Route::get('/register', 'showRegister')->name('register');
+    Route::get('/register', 'showRegister')->middleware('auth')->name('register');
     Route::post('/register', 'register')->name('register.post');
-    
+
     // Login & Logout Routes
     Route::get('/login', 'showLogin')->name('login');
     Route::post('/login', 'login')->name('login.post');
@@ -39,11 +39,11 @@ Route::controller(AuthController::class)->group(function () {
 // ==========================================
 Route::controller(ProjectController::class)->group(function () {
     Route::get('/admin/received-projects', 'receivedProjects')->name('admin.received.projects');
-    
+
     // Actions
     Route::post('/projects/send', 'sendProject')->name('projects.send');
     Route::post('/projects/forward', 'forwardProject')->name('projects.forward');
-    
+
     // Views/Lists
     Route::get('/projects/received', 'receivedProjects')->name('received.projects');
     Route::get('/projects/sent', 'sentProjects')->name('sent.projects');
@@ -90,12 +90,12 @@ Route::middleware('auth')->group(function () {
     // Financial Transactions Management
     // إدارة المعاملات المالية
     // ------------------------------------------
-    
+
     // Exception: Delete route requires specific prefix (/accountant)
     // استثناء: مسار الحذف يمتلك بادئة مختلفة مخصصة لقسم الحسابات
     Route::delete('/accountant/transactions/{id}', [TransactionController::class, 'destroy'])
         ->name('transactions.destroy');
-    
+
     // Standard Resource routes for transactions
     // المسارات القياسية لإنشاء وتعديل المعاملات
     // Generates: create, store, edit, update
